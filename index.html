@@ -30,7 +30,7 @@
   main {
     max-width: 44rem;
     margin: 0 auto;
-    padding: 8vh 1.5rem 4.5rem;
+    padding: 1.75rem 1.5rem 4.5rem;
   }
   .mast {
     display: flex;
@@ -62,13 +62,14 @@
     line-height: 1.45;
     color: #ddd6c8;
     max-width: 38rem;
-    margin: 0 0 1.8rem;
+    margin: 0 0 0.85rem;
   }
   .transport {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.7rem 1.15rem;
+    margin: 0 0 1.15rem;
   }
   button {
     font: inherit;
@@ -89,6 +90,19 @@
     border-color: var(--fg);
   }
   button:disabled { opacity: 0.4; cursor: default; }
+  #play {
+    background: var(--accent);
+    color: #1a120c;
+    border-color: var(--accent);
+    font-weight: 600;
+    min-width: 5.5rem;
+  }
+  #play:hover { color: #1a120c; background: #ebc08a; border-color: #ebc08a; }
+  #play[aria-pressed="true"] {
+    background: var(--fg);
+    color: var(--bg);
+    border-color: var(--fg);
+  }
   .tempo {
     display: flex;
     align-items: center;
@@ -185,7 +199,6 @@
     <p class="date" id="date"></p>
   </header>
   <h1 id="kit-name">Night Market</h1>
-  <p class="lede" id="lede"></p>
   <div class="transport">
     <button type="button" id="play" aria-pressed="false">Play</button>
     <label class="tempo">Tempo
@@ -195,6 +208,7 @@
     <p class="readout" id="readout" aria-live="polite"></p>
     <button type="button" id="extend">Extend</button>
   </div>
+  <p class="lede" id="lede"></p>
   <p class="note" id="note">Press Play to start the sound. Extend adds four bars. New bars keep this pattern and vary it, then the arrangement loops.</p>
   <div class="ticks" id="ticks" aria-hidden="true"></div>
   <div class="score" id="score" aria-hidden="true"></div>
