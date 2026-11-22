@@ -241,6 +241,30 @@
     margin: 0.12rem 0;
   }
   .knob input { width: 100%; accent-color: var(--accent); }
+  .menu-label {
+    display: block;
+    color: var(--muted);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin: 0 0 0.85rem;
+  }
+  .menu-label select {
+    display: block;
+    width: 100%;
+    margin-top: 0.35rem;
+    font: inherit;
+    letter-spacing: 0;
+    text-transform: none;
+    font-size: 0.95rem;
+    color: var(--fg);
+    background: #1c1a17;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    min-height: 44px;
+    padding: 0.35rem 0.7rem;
+  }
+  #osc-controls[hidden] { display: none; }
   .status { color: var(--muted); font-size: 0.85rem; margin: 0 0 0.85rem; }
   .status:empty { display: none; }
   @media (min-width: 860px) {
@@ -281,20 +305,27 @@
     <button type="button" id="tab-rhythm" role="tab" aria-selected="false" aria-controls="pane-rhythm">Rhythm</button>
   </div>
   <div id="pane-sound" role="tabpanel">
-    <div class="modes" role="group" aria-label="Sound">
-      <button type="button" data-mode="osc" aria-pressed="true">Oscillator</button>
-      <button type="button" data-mode="acoustic" aria-pressed="false">Acoustic</button>
-      <button type="button" data-mode="modern" aria-pressed="false">Modern electronic</button>
+    <label class="menu-label">Sound
+      <select id="sound"></select>
+    </label>
+    <div id="osc-controls">
+      <label class="menu-label">Voice
+        <select id="voice"></select>
+      </label>
+      <label class="knob">Level <input id="knob-level" type="range" min="0.2" max="1.6" step="0.01" value="1" aria-label="Level"></label>
+      <label class="knob">Pitch <input id="knob-pitch" type="range" min="-12" max="12" step="1" value="0" aria-label="Pitch"></label>
+      <label class="knob">Decay <input id="knob-decay" type="range" min="0.5" max="1.8" step="0.01" value="1" aria-label="Decay"></label>
+      <label class="knob">Tone <input id="knob-tone" type="range" min="-1" max="1" step="0.01" value="0" aria-label="Tone"></label>
     </div>
-    <div class="families" id="families" role="group" aria-label="Oscillator kit"></div>
-    <div id="voices"></div>
     <div class="panel-actions">
       <button type="button" id="new-kit">New kit</button>
       <button type="button" id="today" hidden>Today’s kit</button>
     </div>
   </div>
   <div id="pane-rhythm" role="tabpanel" hidden>
-    <div class="rhythms" id="rhythms" role="group" aria-label="Rhythm"></div>
+    <label class="menu-label">Rhythm
+      <select id="rhythm"></select>
+    </label>
   </div>
 </aside>
 <main>
@@ -418,6 +449,66 @@
       { id: "ring", name: "glass", kind: "bowl", f: 523, decay: 0.28, gain: 0.14 },
       { id: "tom", name: "pad", kind: "kick", fEnd: 198, sweep: 0.28, snap: 0.003, drop: 0.025, decay: 0.09, click: 0.12, drive: 1.3, body: 360, bodyGain: 0.1, bodyTau: 0.03, gain: 0.34 },
       { id: "clap", name: "snap", kind: "clap", center: 2200, bursts: 2, gap: 0.0035, tail: 0.03, q: 2.4, flesh: 0.12, gain: 0.24 }
+    ],
+    yard: [
+      { id: "kick", name: "stone", kind: "kick", fEnd: 92, sweep: 1.1, snap: 0.006, drop: 0.04, decay: 0.09, click: 0.35, drive: 1.8, body: 280, bodyGain: 0.16, bodyTau: 0.03, gain: 0.7 },
+      { id: "snare", name: "wick", kind: "snare", f: 240, tone: 0.7, snappy: 0.55, noiseTau: 0.05, noiseHp: 1200, noiseBp: 3600, noiseQ: 0.8, gain: 0.42 },
+      { id: "hat", name: "moth", kind: "shaker", bp: 6800, hp: 4800, q: 0.9, decay: 0.02, grains: 5, gap: 0.0032, gain: 0.28 },
+      { id: "ghost", name: "twig", kind: "rim", f: 980, decay: 0.025, noise: 0.4, gain: 0.28 },
+      { id: "bell", name: "spark", kind: "cowbell", f1: 880, f2: 1320, center: 1800, decay: 0.05, gain: 0.32 },
+      { id: "ring", name: "cup", kind: "bowl", f: 392, decay: 0.18, gain: 0.16 },
+      { id: "tom", name: "pot", kind: "kick", fEnd: 160, sweep: 0.35, snap: 0.004, drop: 0.03, decay: 0.1, click: 0.08, drive: 1.5, body: 240, bodyGain: 0.12, bodyTau: 0.03, gain: 0.38 },
+      { id: "clap", name: "latch", kind: "clap", center: 1600, bursts: 2, gap: 0.004, tail: 0.025, q: 1.6, flesh: 0.2, gain: 0.28 }
+    ],
+    basement: [
+      { id: "kick", name: "floor", kind: "kick", fEnd: 36, sweep: 2.2, snap: 0.014, drop: 0.1, decay: 0.42, click: 0.08, drive: 2.2, body: 70, bodyGain: 0.2, bodyTau: 0.09, gain: 0.9 },
+      { id: "snare", name: "pipe", kind: "snare", f: 110, tone: 0.3, snappy: 0.7, noiseTau: 0.16, noiseHp: 600, noiseBp: 1600, noiseQ: 0.6, gain: 0.5 },
+      { id: "hat", name: "dust", kind: "metal", scale: 0.72, decay: 0.08, gain: 0.16 },
+      { id: "ghost", name: "drip", kind: "rim", f: 280, decay: 0.07, noise: 0.45, gain: 0.26 },
+      { id: "bell", name: "iron", kind: "cowbell", f1: 420, f2: 630, center: 900, decay: 0.18, gain: 0.22 },
+      { id: "ring", name: "tank", kind: "bowl", f: 146, decay: 0.85, gain: 0.2 },
+      { id: "tom", name: "barrel", kind: "kick", fEnd: 70, sweep: 0.7, snap: 0.01, drop: 0.06, decay: 0.28, click: 0.05, drive: 1.7, body: 120, bodyGain: 0.16, bodyTau: 0.07, gain: 0.48 },
+      { id: "clap", name: "door", kind: "clap", center: 620, bursts: 4, gap: 0.012, tail: 0.09, q: 1.1, flesh: 0.5, gain: 0.26 }
+    ],
+    glasshouse: [
+      { id: "kick", name: "pebble", kind: "kick", fEnd: 100, sweep: 0.7, snap: 0.005, drop: 0.03, decay: 0.08, click: 0.15, drive: 1.3, body: 240, bodyGain: 0.1, bodyTau: 0.025, gain: 0.55 },
+      { id: "snare", name: "shard", kind: "snare", f: 300, tone: 0.62, snappy: 0.35, noiseTau: 0.04, noiseHp: 1800, noiseBp: 5000, noiseQ: 1.1, gain: 0.32 },
+      { id: "hat", name: "pane", kind: "metal", scale: 1.35, decay: 0.07, gain: 0.34 },
+      { id: "ghost", name: "tick", kind: "rim", f: 1400, decay: 0.02, noise: 0.2, gain: 0.22 },
+      { id: "bell", name: "chime", kind: "cowbell", f1: 1560, f2: 2100, center: 2800, decay: 0.06, gain: 0.3 },
+      { id: "ring", name: "globe", kind: "bowl", f: 660, decay: 0.55, gain: 0.28 },
+      { id: "tom", name: "vase", kind: "kick", fEnd: 220, sweep: 0.2, snap: 0.003, drop: 0.02, decay: 0.08, click: 0.04, drive: 1.2, body: 400, bodyGain: 0.08, bodyTau: 0.03, gain: 0.3 },
+      { id: "clap", name: "clink", kind: "clap", center: 2400, bursts: 2, gap: 0.003, tail: 0.02, q: 2.2, flesh: 0.08, gain: 0.2 }
+    ],
+    brass: [
+      { id: "kick", name: "hoof", kind: "kick", fEnd: 74, sweep: 1.3, snap: 0.007, drop: 0.05, decay: 0.12, click: 0.28, drive: 2.0, body: 210, bodyGain: 0.2, bodyTau: 0.04, gain: 0.72 },
+      { id: "snare", name: "strap", kind: "snare", f: 180, tone: 0.66, snappy: 0.5, noiseTau: 0.07, noiseHp: 900, noiseBp: 2400, noiseQ: 0.7, gain: 0.4 },
+      { id: "hat", name: "rattle", kind: "shaker", bp: 5200, hp: 3000, q: 0.8, decay: 0.03, grains: 4, gap: 0.004, gain: 0.2 },
+      { id: "ghost", name: "rim", kind: "rim", f: 700, decay: 0.035, noise: 0.45, gain: 0.3 },
+      { id: "bell", name: "horn", kind: "cowbell", f1: 540, f2: 800, center: 1100, decay: 0.16, gain: 0.5 },
+      { id: "ring", name: "gong", kind: "bowl", f: 247, decay: 0.35, gain: 0.24 },
+      { id: "tom", name: "shell", kind: "kick", fEnd: 118, sweep: 0.45, snap: 0.006, drop: 0.04, decay: 0.14, click: 0.1, drive: 1.6, body: 190, bodyGain: 0.14, bodyTau: 0.04, gain: 0.42 },
+      { id: "clap", name: "plate", kind: "clap", center: 1000, bursts: 3, gap: 0.009, tail: 0.06, q: 1.2, flesh: 0.35, gain: 0.48 }
+    ],
+    rain: [
+      { id: "kick", name: "puddle", kind: "kick", fEnd: 58, sweep: 1.0, snap: 0.008, drop: 0.05, decay: 0.1, click: 0.08, drive: 1.4, body: 160, bodyGain: 0.1, bodyTau: 0.04, gain: 0.6 },
+      { id: "snare", name: "cloth", kind: "snare", f: 150, tone: 0.4, snappy: 0.25, noiseTau: 0.06, noiseHp: 700, noiseBp: 1800, noiseQ: 0.55, gain: 0.28 },
+      { id: "hat", name: "rain", kind: "shaker", bp: 4000, hp: 2000, q: 0.6, decay: 0.07, grains: 9, gap: 0.006, gain: 0.42 },
+      { id: "ghost", name: "drip", kind: "rim", f: 480, decay: 0.05, noise: 0.25, gain: 0.18 },
+      { id: "bell", name: "drop", kind: "cowbell", f1: 760, f2: 1100, center: 1400, decay: 0.04, gain: 0.12 },
+      { id: "ring", name: "cistern", kind: "bowl", f: 330, decay: 0.6, gain: 0.18 },
+      { id: "tom", name: "bucket", kind: "kick", fEnd: 140, sweep: 0.3, snap: 0.005, drop: 0.03, decay: 0.12, click: 0.02, drive: 1.3, body: 200, bodyGain: 0.1, bodyTau: 0.04, gain: 0.28 },
+      { id: "clap", name: "pat", kind: "clap", center: 800, bursts: 3, gap: 0.01, tail: 0.04, q: 1.0, flesh: 0.2, gain: 0.18 }
+    ],
+    ember: [
+      { id: "kick", name: "coal", kind: "kick", fEnd: 88, sweep: 1.6, snap: 0.004, drop: 0.02, decay: 0.07, click: 0.7, drive: 2.8, body: 320, bodyGain: 0.12, bodyTau: 0.02, gain: 0.74 },
+      { id: "snare", name: "crack", kind: "snare", f: 260, tone: 0.8, snappy: 0.85, noiseTau: 0.035, noiseHp: 2000, noiseBp: 4800, noiseQ: 1.2, gain: 0.46 },
+      { id: "hat", name: "ash", kind: "shaker", bp: 8000, hp: 6000, q: 1.1, decay: 0.016, grains: 3, gap: 0.002, gain: 0.22 },
+      { id: "ghost", name: "spark", kind: "rim", f: 1500, decay: 0.016, noise: 0.8, gain: 0.32 },
+      { id: "bell", name: "ping", kind: "cowbell", f1: 1800, f2: 2400, center: 3200, decay: 0.025, gain: 0.16 },
+      { id: "ring", name: "hiss", kind: "bowl", f: 740, decay: 0.08, gain: 0.08 },
+      { id: "tom", name: "log", kind: "kick", fEnd: 210, sweep: 0.22, snap: 0.003, drop: 0.02, decay: 0.06, click: 0.3, drive: 1.8, body: 380, bodyGain: 0.08, bodyTau: 0.02, gain: 0.36 },
+      { id: "clap", name: "snap", kind: "clap", center: 2600, bursts: 2, gap: 0.003, tail: 0.018, q: 2.6, flesh: 0.1, gain: 0.3 }
     ]
   };
 
@@ -425,7 +516,13 @@
     market: { id: "market", name: "Night Market", idea: "Clay, paper, and small brass.", tempo: 86, room: 0.15 },
     kiln: { id: "kiln", name: "Kiln Door", idea: "Dry ceramic and close wood.", tempo: 102, room: 0.07 },
     ferry: { id: "ferry", name: "Night Ferry", idea: "A low hull and slow metal.", tempo: 74, room: 0.22 },
-    paper: { id: "paper", name: "Paper Room", idea: "Close, dry, and short.", tempo: 118, room: 0.045 }
+    paper: { id: "paper", name: "Paper Room", idea: "Close, dry, and short.", tempo: 118, room: 0.045 },
+    yard: { id: "yard", name: "Lantern Yard", idea: "Higher, shorter, and bright.", tempo: 96, room: 0.1 },
+    basement: { id: "basement", name: "Basement", idea: "A low floor and a long pipe.", tempo: 70, room: 0.28 },
+    glasshouse: { id: "glasshouse", name: "Glasshouse", idea: "Thin glass and a small kick.", tempo: 108, room: 0.12 },
+    brass: { id: "brass", name: "Brass Hall", idea: "A horn in front of the drums.", tempo: 92, room: 0.16 },
+    rain: { id: "rain", name: "Rain Court", idea: "Soft grains and a muted kick.", tempo: 80, room: 0.18 },
+    ember: { id: "ember", name: "Ember", idea: "Dry, close, and hot.", tempo: 124, room: 0.05 }
   };
 
   // --- pattern essences -----------------------------------------------------
@@ -817,6 +914,167 @@
       compose: gateCompose
     }
   };
+
+  function stepsOf(bar, salt, rows) {
+    const out = [];
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      out.push(place(bar, salt, r[0], r[1], r[2], r[3] || 0, r[4] || 0));
+    }
+    return out;
+  }
+
+  function shiftRows(rows, leads, by) {
+    const out = [];
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i].slice();
+      if (leads.indexOf(r[0]) >= 0) r[1] = (r[1] + by + STEPS) % STEPS;
+      out.push(r);
+    }
+    return out;
+  }
+
+  function addRows(rows, extra) {
+    const out = [];
+    for (let i = 0; i < rows.length; i++) out.push(rows[i].slice());
+    for (let i = 0; i < extra.length; i++) out.push(extra[i].slice());
+    return out;
+  }
+
+  function specEssence(spec) {
+    return {
+      id: spec.id,
+      name: spec.name,
+      line: spec.name,
+      caption: spec.caption,
+      compose: function (bar, salt) {
+        const phrase = Math.floor(bar / 4);
+        const odd = phrase % 2 === 1;
+        const deep = phrase >= 2;
+        if (bar % 8 === 7) return stepsOf(bar, salt, spec.breath);
+        const phase = bar % 4;
+        let rows = spec.identity.map(function (r) { return r.slice(); });
+        if (phase === 1) rows = shiftRows(rows, spec.leads, spec.shift || 1);
+        if (phase === 2) rows = addRows(rows, spec.ghosts || []);
+        if (phase === 3) rows = addRows(rows, deep && spec.fillLong ? spec.fillLong : (spec.fill || []));
+        if (odd && spec.odd) rows = addRows(rows, spec.odd);
+        return stepsOf(bar, salt, rows);
+      }
+    };
+  }
+
+  [
+    {
+      id: "floor", name: "Four on the floor", leads: ["hat"],
+      caption: { breath: "A breath", identity: "The floor", displace: "The hats slide", ghosts: "Ghosts on the backbeat", fill: "A tom fill" },
+      identity: [["kick", 0, 1], ["kick", 4, 0.86], ["kick", 8, 0.96], ["kick", 12, 0.86], ["snare", 4, 0.84], ["snare", 12, 0.8], ["hat", 2, 0.34], ["hat", 6, 0.3], ["hat", 10, 0.32], ["hat", 14, 0.28], ["clap", 4, 0.36], ["clap", 12, 0.32]],
+      breath: [["kick", 0, 0.9], ["hat", 8, 0.24], ["snare", 12, 0.5]],
+      ghosts: [["ghost", 3, 0.22], ["ghost", 11, 0.2]],
+      fill: [["tom", 13, 0.42], ["tom", 14, 0.5], ["tom", 15, 0.66]],
+      fillLong: [["tom", 11, 0.3], ["tom", 12, 0.4], ["tom", 13, 0.48], ["tom", 14, 0.58], ["tom", 15, 0.72]],
+      odd: [["bell", 15, 0.36]]
+    },
+    {
+      id: "clave", name: "Son clave", leads: ["bell"],
+      caption: { breath: "A breath", identity: "The clave", displace: "The clave waits", ghosts: "A ghost under the clave", fill: "The clave fills" },
+      identity: [["bell", 0, 0.7], ["bell", 3, 0.55], ["bell", 6, 0.62], ["bell", 10, 0.58], ["bell", 12, 0.66], ["kick", 0, 0.9], ["kick", 8, 0.72], ["hat", 2, 0.22], ["hat", 6, 0.2], ["hat", 10, 0.22], ["hat", 14, 0.18], ["snare", 12, 0.55]],
+      breath: [["kick", 0, 0.8], ["bell", 0, 0.5], ["bell", 10, 0.4]],
+      ghosts: [["ghost", 6, 0.24], ["ghost", 12, 0.22]],
+      fill: [["tom", 13, 0.36], ["tom", 14, 0.44], ["clap", 15, 0.3]],
+      odd: [["ring", 8, 0.28]]
+    },
+    {
+      id: "tresillo", name: "Tresillo", leads: ["kick"],
+      caption: { breath: "A breath", identity: "The tresillo", displace: "The kick slides", ghosts: "Ghosts in the gaps", fill: "A short fill" },
+      identity: [["kick", 0, 1], ["kick", 6, 0.82], ["kick", 10, 0.78], ["snare", 4, 0.7], ["snare", 12, 0.74], ["hat", 2, 0.28], ["hat", 8, 0.3], ["hat", 14, 0.24], ["clap", 4, 0.32]],
+      breath: [["kick", 0, 0.88], ["snare", 12, 0.4], ["hat", 8, 0.2]],
+      ghosts: [["ghost", 3, 0.2], ["ghost", 9, 0.18]],
+      fill: [["tom", 14, 0.4], ["tom", 15, 0.55]],
+      odd: [["bell", 10, 0.34]]
+    },
+    {
+      id: "push", name: "Anticipation", leads: ["snare"], shift: 1,
+      caption: { breath: "A breath", identity: "Ahead of the beat", displace: "On the beat", ghosts: "A ghost after", fill: "The push fills" },
+      identity: [["kick", 0, 1], ["kick", 8, 0.86], ["snare", 3, 0.84], ["snare", 11, 0.78], ["hat", 0, 0.22], ["hat", 4, 0.26], ["hat", 8, 0.24], ["hat", 12, 0.22], ["hat", 2, 0.18], ["hat", 6, 0.18], ["hat", 10, 0.18], ["hat", 14, 0.16]],
+      breath: [["kick", 0, 0.85], ["snare", 11, 0.45]],
+      ghosts: [["ghost", 4, 0.22], ["ghost", 12, 0.2]],
+      fill: [["tom", 14, 0.42], ["clap", 15, 0.34]],
+      odd: [["bell", 7, 0.3]]
+    },
+    {
+      id: "procession", name: "Procession", leads: ["snare"],
+      caption: { breath: "A breath", identity: "Two steps", displace: "The answer later", ghosts: "A ghost between", fill: "The step fills" },
+      identity: [["kick", 0, 1], ["kick", 8, 0.9], ["snare", 8, 0.72], ["bell", 0, 0.48], ["hat", 4, 0.2], ["hat", 12, 0.18], ["ring", 0, 0.26]],
+      breath: [["kick", 0, 0.9], ["bell", 0, 0.4]],
+      ghosts: [["ghost", 4, 0.2], ["ghost", 12, 0.18]],
+      fill: [["tom", 14, 0.36], ["tom", 15, 0.48]],
+      odd: [["clap", 8, 0.28]]
+    },
+    {
+      id: "shuffle", name: "Shuffle", leads: ["hat"],
+      caption: { breath: "A breath", identity: "The shuffle", displace: "The hats drag", ghosts: "Ghosts in the gallop", fill: "The shuffle fills" },
+      identity: [["kick", 0, 0.95], ["kick", 8, 0.8], ["snare", 4, 0.78], ["snare", 12, 0.74], ["hat", 3, 0.34], ["hat", 6, 0.28], ["hat", 11, 0.32], ["hat", 14, 0.26], ["clap", 4, 0.3]],
+      breath: [["kick", 0, 0.85], ["hat", 6, 0.22], ["snare", 12, 0.4]],
+      ghosts: [["ghost", 4, 0.2], ["ghost", 12, 0.18]],
+      fill: [["tom", 13, 0.34], ["tom", 15, 0.5]],
+      odd: [["bell", 11, 0.28]]
+    },
+    {
+      id: "hollow", name: "Hollow", leads: ["hat"],
+      caption: { breath: "A breath", identity: "Mostly air", displace: "The air shifts", ghosts: "More air", fill: "A small landing" },
+      identity: [["kick", 0, 0.45], ["hat", 0, 0.22], ["hat", 2, 0.3], ["hat", 4, 0.24], ["hat", 6, 0.32], ["hat", 8, 0.26], ["hat", 10, 0.3], ["hat", 12, 0.22], ["hat", 14, 0.28], ["snare", 12, 0.42], ["ghost", 4, 0.2], ["ghost", 12, 0.18]],
+      breath: [["hat", 0, 0.2], ["hat", 8, 0.18], ["kick", 0, 0.35]],
+      ghosts: [["ghost", 8, 0.16], ["bell", 14, 0.16]],
+      fill: [["tom", 15, 0.4], ["snare", 14, 0.28]],
+      odd: [["ring", 8, 0.2]]
+    },
+    {
+      id: "cascade", name: "Cascade", leads: ["snare", "bell"],
+      caption: { breath: "A breath", identity: "Down the bar", displace: "The fall waits", ghosts: "Ghosts in the fall", fill: "The fall continues" },
+      identity: [["kick", 0, 0.9], ["hat", 4, 0.28], ["snare", 8, 0.8], ["hat", 10, 0.32], ["tom", 12, 0.45], ["tom", 14, 0.55], ["bell", 15, 0.5]],
+      breath: [["kick", 0, 0.8], ["bell", 15, 0.35]],
+      ghosts: [["ghost", 8, 0.22], ["ghost", 12, 0.2]],
+      fill: [["tom", 13, 0.4], ["clap", 15, 0.32]],
+      fillLong: [["hat", 11, 0.24], ["tom", 12, 0.4], ["tom", 13, 0.48], ["tom", 14, 0.56], ["bell", 15, 0.5]],
+      odd: [["ring", 0, 0.24]]
+    },
+    {
+      id: "ostinato", name: "Ostinato", leads: ["hat", "ghost"],
+      caption: { breath: "A breath", identity: "The cell", displace: "The cell shifts", ghosts: "A second cell", fill: "The cell breaks" },
+      identity: [["kick", 0, 0.92], ["kick", 8, 0.7], ["hat", 1, 0.3], ["hat", 5, 0.26], ["hat", 9, 0.28], ["hat", 13, 0.24], ["ghost", 2, 0.28], ["ghost", 6, 0.24], ["ghost", 10, 0.26], ["ghost", 14, 0.22], ["snare", 4, 0.72], ["snare", 12, 0.68]],
+      breath: [["kick", 0, 0.8], ["hat", 1, 0.22], ["ghost", 2, 0.18]],
+      ghosts: [["clap", 4, 0.22], ["clap", 12, 0.2]],
+      fill: [["tom", 14, 0.4], ["tom", 15, 0.55]],
+      odd: [["bell", 9, 0.3]]
+    },
+    {
+      id: "offbeat", name: "Offbeat", leads: ["kick"],
+      caption: { breath: "A breath", identity: "On the and", displace: "Toward the beat", ghosts: "Ghosts on the beat", fill: "The and fills" },
+      identity: [["kick", 2, 0.86], ["kick", 6, 0.74], ["kick", 10, 0.8], ["kick", 14, 0.7], ["snare", 4, 0.78], ["snare", 12, 0.74], ["hat", 0, 0.24], ["hat", 4, 0.22], ["hat", 8, 0.24], ["hat", 12, 0.2]],
+      breath: [["kick", 2, 0.6], ["snare", 12, 0.4], ["hat", 8, 0.18]],
+      ghosts: [["ghost", 0, 0.2], ["ghost", 8, 0.18]],
+      fill: [["tom", 13, 0.36], ["tom", 15, 0.5]],
+      odd: [["bell", 6, 0.32]]
+    },
+    {
+      id: "march", name: "March", leads: ["ghost"],
+      caption: { breath: "A breath", identity: "In step", displace: "The rims slide", ghosts: "Extra rims", fill: "The march fills" },
+      identity: [["kick", 0, 1], ["kick", 4, 0.82], ["kick", 8, 0.94], ["kick", 12, 0.8], ["snare", 4, 0.88], ["snare", 12, 0.86], ["ghost", 2, 0.3], ["ghost", 6, 0.26], ["ghost", 10, 0.28], ["ghost", 14, 0.24], ["hat", 8, 0.18]],
+      breath: [["kick", 0, 0.9], ["snare", 8, 0.4]],
+      ghosts: [["bell", 0, 0.28], ["bell", 8, 0.22]],
+      fill: [["tom", 13, 0.4], ["tom", 14, 0.5], ["tom", 15, 0.62]],
+      odd: [["clap", 12, 0.3]]
+    },
+    {
+      id: "sparse", name: "Sparse bell", leads: ["bell", "ring"],
+      caption: { breath: "A breath", identity: "Bell and one", displace: "The bell later", ghosts: "A quiet answer", fill: "One extra tone" },
+      identity: [["kick", 0, 0.95], ["bell", 0, 0.62], ["snare", 8, 0.55], ["ring", 8, 0.34], ["hat", 12, 0.16]],
+      breath: [["kick", 0, 0.8], ["bell", 0, 0.4]],
+      ghosts: [["ghost", 8, 0.2], ["hat", 4, 0.14]],
+      fill: [["tom", 14, 0.32], ["bell", 15, 0.36]],
+      odd: [["clap", 8, 0.22]]
+    }
+  ].forEach(function (spec) { ESSENCES[spec.id] = specEssence(spec); });
 
   // Sunday 22 Nov 2026, Asia/Shanghai. Hand-set: no transposition, no decay nudge.
   const AUTHORED = {
@@ -1307,41 +1565,97 @@
     clap: triggerClap
   };
 
-  // Acoustic and modern are rendered one-shots, not more oscillator presets.
+  // Sample kits are rendered one-shots, not oscillator presets.
   const SAMPLE = {
     acoustic: {
-      title: "Acoustic",
+      group: "Acoustic", title: "Acoustic",
       files: {
-        kick: "kits/acoustic/kick.wav",
-        snare: "kits/acoustic/snare.wav",
-        hat: "kits/acoustic/hat.wav",
-        ghost: "kits/acoustic/rim.wav",
-        bell: "kits/acoustic/clave.wav",
-        ring: "kits/acoustic/ride.wav",
-        tom: "kits/acoustic/tom.wav",
-        clap: "kits/acoustic/clap.wav"
+        kick: "kits/acoustic/kick.wav", snare: "kits/acoustic/snare.wav", hat: "kits/acoustic/hat.wav",
+        ghost: "kits/acoustic/rim.wav", bell: "kits/acoustic/clave.wav", ring: "kits/acoustic/ride.wav",
+        tom: "kits/acoustic/tom.wav", clap: "kits/acoustic/clap.wav"
       },
-      names: {
-        kick: "kick", snare: "snare", hat: "hat", ghost: "rim",
-        bell: "clave", ring: "ride", tom: "tom", clap: "clap"
-      }
+      names: { kick: "kick", snare: "snare", hat: "hat", ghost: "rim", bell: "clave", ring: "ride", tom: "tom", clap: "clap" }
+    },
+    soft: {
+      group: "Acoustic", title: "Soft kit",
+      files: {
+        kick: "kits/soft/kick.wav", snare: "kits/soft/snare.wav", hat: "kits/soft/hat.wav",
+        ghost: "kits/soft/rim.wav", bell: "kits/soft/shaker.wav", ring: "kits/soft/ride.wav",
+        tom: "kits/soft/tom.wav", clap: "kits/soft/snap.wav"
+      },
+      names: { kick: "kick", snare: "brush", hat: "hat", ghost: "rim", bell: "shaker", ring: "ride", tom: "tom", clap: "snap" }
+    },
+    hands: {
+      group: "Acoustic", title: "Hand drums",
+      files: {
+        kick: "kits/hands/kick.wav", snare: "kits/hands/snare.wav", hat: "kits/hands/hat.wav",
+        ghost: "kits/hands/ghost.wav", bell: "kits/hands/clave.wav", ring: "kits/hands/frame.wav",
+        tom: "kits/hands/tom.wav", clap: "kits/hands/clap.wav"
+      },
+      names: { kick: "cajon", snare: "conga", hat: "bongo", ghost: "mute", bell: "clave", ring: "frame", tom: "bongo", clap: "slap" }
+    },
+    deep: {
+      group: "Acoustic", title: "Deep kit",
+      files: {
+        kick: "kits/deep/kick.wav", snare: "kits/deep/snare.wav", hat: "kits/deep/hat.wav",
+        ghost: "kits/deep/rim.wav", bell: "kits/deep/tamb.wav", ring: "kits/deep/crash.wav",
+        tom: "kits/deep/tom.wav", clap: "kits/deep/clap.wav"
+      },
+      names: { kick: "kick", snare: "snare", hat: "hat", ghost: "rim", bell: "tamb", ring: "crash", tom: "floor", clap: "clap" }
+    },
+    cymbal: {
+      group: "Acoustic", title: "Cymbals",
+      files: {
+        kick: "kits/cymbal/kick.wav", snare: "kits/cymbal/snare.wav", hat: "kits/cymbal/hat.wav",
+        ghost: "kits/cymbal/pedal.wav", bell: "kits/cymbal/sticks.wav", ring: "kits/cymbal/crash.wav",
+        tom: "kits/cymbal/tom.wav", clap: "kits/cymbal/cabasa.wav"
+      },
+      names: { kick: "kick", snare: "rim", hat: "hat", ghost: "pedal", bell: "sticks", ring: "crash", tom: "tom", clap: "cabasa" }
     },
     modern: {
-      title: "Modern electronic",
+      group: "Electronic", title: "Modern electronic",
       files: {
-        kick: "kits/modern/kick.wav",
-        snare: "kits/modern/clap.wav",
-        hat: "kits/modern/hat.wav",
-        ghost: "kits/modern/snare.wav",
-        bell: "kits/modern/perc.wav",
-        ring: "kits/modern/openhat.wav",
-        tom: "kits/modern/tom.wav",
-        clap: "kits/modern/clap.wav"
+        kick: "kits/modern/kick.wav", snare: "kits/modern/clap.wav", hat: "kits/modern/hat.wav",
+        ghost: "kits/modern/snare.wav", bell: "kits/modern/perc.wav", ring: "kits/modern/openhat.wav",
+        tom: "kits/modern/tom.wav", clap: "kits/modern/clap.wav"
       },
-      names: {
-        kick: "kick", snare: "clap", hat: "hat", ghost: "snare",
-        bell: "perc", ring: "open hat", tom: "tom", clap: "clap"
-      }
+      names: { kick: "kick", snare: "clap", hat: "hat", ghost: "snare", bell: "perc", ring: "open hat", tom: "tom", clap: "clap" }
+    },
+    punch: {
+      group: "Electronic", title: "Punch",
+      files: {
+        kick: "kits/punch/kick.wav", snare: "kits/punch/clap.wav", hat: "kits/punch/hat.wav",
+        ghost: "kits/punch/snare.wav", bell: "kits/punch/perc.wav", ring: "kits/punch/openhat.wav",
+        tom: "kits/punch/tom.wav", clap: "kits/punch/clap.wav"
+      },
+      names: { kick: "kick", snare: "clap", hat: "hat", ghost: "snare", bell: "perc", ring: "open hat", tom: "tom", clap: "clap" }
+    },
+    sub: {
+      group: "Electronic", title: "Sub",
+      files: {
+        kick: "kits/sub/kick.wav", snare: "kits/sub/clap.wav", hat: "kits/sub/hat.wav",
+        ghost: "kits/sub/snare.wav", bell: "kits/sub/perc.wav", ring: "kits/sub/openhat.wav",
+        tom: "kits/sub/tom.wav", clap: "kits/sub/clap.wav"
+      },
+      names: { kick: "kick", snare: "clap", hat: "hat", ghost: "snare", bell: "perc", ring: "open hat", tom: "tom", clap: "clap" }
+    },
+    spark: {
+      group: "Electronic", title: "Spark",
+      files: {
+        kick: "kits/spark/kick.wav", snare: "kits/spark/clap.wav", hat: "kits/spark/hat.wav",
+        ghost: "kits/spark/snare.wav", bell: "kits/spark/perc.wav", ring: "kits/spark/openhat.wav",
+        tom: "kits/spark/tom.wav", clap: "kits/spark/clap.wav"
+      },
+      names: { kick: "kick", snare: "clap", hat: "hat", ghost: "snare", bell: "perc", ring: "open hat", tom: "tom", clap: "clap" }
+    },
+    dry: {
+      group: "Electronic", title: "Dry machine",
+      files: {
+        kick: "kits/dry/kick.wav", snare: "kits/dry/clap.wav", hat: "kits/dry/hat.wav",
+        ghost: "kits/dry/snare.wav", bell: "kits/dry/perc.wav", ring: "kits/dry/openhat.wav",
+        tom: "kits/dry/tom.wav", clap: "kits/dry/clap.wav"
+      },
+      names: { kick: "kick", snare: "clap", hat: "hat", ghost: "snare", bell: "perc", ring: "open hat", tom: "tom", clap: "clap" }
     }
   };
   const SAMPLE_GAIN = {
@@ -1349,8 +1663,8 @@
     bell: 0.42, ring: 0.36, tom: 0.68, clap: 0.7
   };
   const tweak = {};
-  const buffers = { acoustic: null, modern: null };
-  const loadError = { acoustic: "", modern: "" };
+  const buffers = {};
+  const loadError = {};
   let mode = "osc";
 
   function voiceLive(voice) {
@@ -1402,29 +1716,18 @@
   function triggerSample(id, time, vel, semi) {
     const pack = buffers[mode];
     if (!pack || !pack[id]) return;
-    const t = tweak[id] || {};
-    const level = t.level == null ? 1 : t.level;
-    const pitch = t.pitch || 0;
-    const decayUser = t.decay == null ? 1 : t.decay;
-    const color = t.color || 0;
-    const rate = Math.pow(2, ((kit ? kit.semi : 0) + pitch + (semi || 0)) / 12);
+    const rate = Math.pow(2, (semi || 0) / 12);
     const src = ctx.createBufferSource();
     src.buffer = pack[id];
     src.playbackRate.setValueAtTime(rate, time);
     const g = ctx.createGain();
-    const peak = (SAMPLE_GAIN[id] || 0.5) * level * vel;
-    const dur = pack[id].duration / rate;
-    if (decayUser < 0.98) {
-      env(g.gain, time, peak, 0.001, 0, Math.max(0.02, dur * decayUser));
-    } else {
-      g.gain.setValueAtTime(peak, time);
-    }
+    g.gain.setValueAtTime((SAMPLE_GAIN[id] || 0.5) * vel, time);
     src.connect(g);
-    const nodes = [src, g];
-    voiceOut(g, { color: color }, nodes);
+    g.connect(master);
+    const dur = pack[id].duration / rate;
     src.start(time);
     src.stop(time + dur + 0.03);
-    cleanup(nodes, time + dur + 0.05);
+    cleanup([src, g], time + dur + 0.05);
   }
 
   function trigger(voice, time, vel, semi) {
@@ -1580,9 +1883,10 @@
   const dateEl = document.getElementById("date");
   const panel = document.getElementById("kit-panel");
   const panelToggle = document.getElementById("panel-toggle");
-  const familiesEl = document.getElementById("families");
-  const voicesEl = document.getElementById("voices");
-  const rhythmsEl = document.getElementById("rhythms");
+  const soundSel = document.getElementById("sound");
+  const rhythmSel = document.getElementById("rhythm");
+  const voiceSel = document.getElementById("voice");
+  const oscControls = document.getElementById("osc-controls");
   const paneSound = document.getElementById("pane-sound");
   const paneRhythm = document.getElementById("pane-rhythm");
   const tabSound = document.getElementById("tab-sound");
@@ -1598,69 +1902,69 @@
     Object.keys(tweak).forEach(function (k) { delete tweak[k]; });
   }
 
-  function knob(id, key, label, value, min, max, step) {
-    const lab = document.createElement("label");
-    lab.className = "knob";
-    lab.appendChild(document.createTextNode(label));
-    const input = document.createElement("input");
-    input.type = "range";
-    input.min = String(min);
-    input.max = String(max);
-    input.step = String(step);
-    input.value = String(value);
-    input.dataset.id = id;
-    input.dataset.knob = key;
-    input.setAttribute("aria-label", label);
-    lab.appendChild(input);
-    return lab;
+  let editVoice = "kick";
+  let menusReady = false;
+
+  function currentSoundId() {
+    return mode === "osc" ? kit.familyId : mode;
+  }
+
+  function addOption(parent, value, text) {
+    const o = document.createElement("option");
+    o.value = value;
+    o.textContent = text;
+    parent.appendChild(o);
+  }
+
+  function ensureMenus() {
+    if (menusReady) return;
+    menusReady = true;
+    const groups = [];
+    function group(name) {
+      for (let i = 0; i < groups.length; i++) if (groups[i].label === name) return groups[i];
+      const el = document.createElement("optgroup");
+      el.label = name;
+      groups.push(el);
+      return el;
+    }
+    Object.keys(FAMILIES).forEach(function (id) { addOption(group("Oscillator"), id, FAMILIES[id].name); });
+    Object.keys(SAMPLE).forEach(function (id) { addOption(group(SAMPLE[id].group), id, SAMPLE[id].title); });
+    for (let i = 0; i < groups.length; i++) soundSel.appendChild(groups[i]);
+    Object.keys(ESSENCES).forEach(function (id) { addOption(rhythmSel, id, ESSENCES[id].name); });
+  }
+
+  function showKnobs() {
+    const t = tweak[editVoice] || {};
+    document.getElementById("knob-level").value = String(t.level == null ? 1 : t.level);
+    document.getElementById("knob-pitch").value = String(t.pitch || 0);
+    document.getElementById("knob-decay").value = String(t.decay == null ? 1 : t.decay);
+    document.getElementById("knob-tone").value = String(t.color || 0);
+  }
+
+  function fillVoiceMenu() {
+    const prev = editVoice;
+    voiceSel.textContent = "";
+    let keep = false;
+    for (let i = 0; i < kit.voices.length; i++) {
+      const v = kit.voices[i];
+      addOption(voiceSel, v.id, v.name);
+      if (v.id === prev) keep = true;
+    }
+    editVoice = keep ? prev : kit.voices[0].id;
+    voiceSel.value = editVoice;
+    showKnobs();
   }
 
   function syncPanel() {
-    const modeBtns = panel.querySelectorAll("[data-mode]");
-    for (let i = 0; i < modeBtns.length; i++) {
-      modeBtns[i].setAttribute("aria-pressed", modeBtns[i].dataset.mode === mode ? "true" : "false");
-    }
+    ensureMenus();
+    soundSel.value = currentSoundId();
+    rhythmSel.value = kit.essence.id;
+    oscControls.hidden = mode !== "osc";
     tabSound.setAttribute("aria-selected", panelTab === "sound" ? "true" : "false");
     tabRhythm.setAttribute("aria-selected", panelTab === "rhythm" ? "true" : "false");
     paneSound.hidden = panelTab !== "sound";
     paneRhythm.hidden = panelTab !== "rhythm";
-    familiesEl.hidden = mode !== "osc";
-    familiesEl.textContent = "";
-    if (mode === "osc") {
-      Object.keys(FAMILIES).forEach(function (id) {
-        const b = document.createElement("button");
-        b.type = "button";
-        b.textContent = FAMILIES[id].name;
-        b.dataset.family = id;
-        b.setAttribute("aria-pressed", kit.familyId === id ? "true" : "false");
-        familiesEl.appendChild(b);
-      });
-    }
-    rhythmsEl.textContent = "";
-    Object.keys(ESSENCES).forEach(function (id) {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.textContent = ESSENCES[id].name;
-      b.dataset.essence = id;
-      b.setAttribute("aria-pressed", kit.essence.id === id ? "true" : "false");
-      rhythmsEl.appendChild(b);
-    });
-    const names = mode === "osc" ? null : SAMPLE[mode].names;
-    voicesEl.textContent = "";
-    for (let i = 0; i < kit.voices.length; i++) {
-      const voice = kit.voices[i];
-      const t = tweak[voice.id] || {};
-      const box = document.createElement("div");
-      box.className = "voice-edit";
-      const h = document.createElement("h3");
-      h.textContent = names ? names[voice.id] : voice.name;
-      box.appendChild(h);
-      box.appendChild(knob(voice.id, "level", "Level", t.level == null ? 1 : t.level, 0.2, 1.6, 0.01));
-      box.appendChild(knob(voice.id, "pitch", "Pitch", t.pitch || 0, -12, 12, 1));
-      box.appendChild(knob(voice.id, "decay", "Decay", t.decay == null ? 1 : t.decay, 0.5, 1.8, 0.01));
-      box.appendChild(knob(voice.id, "color", "Tone", t.color || 0, -1, 1, 0.01));
-      voicesEl.appendChild(box);
-    }
+    if (mode === "osc") fillVoiceMenu();
   }
 
   function setPanel(open) {
@@ -1985,6 +2289,15 @@
     syncPanel();
   }
 
+  function pickSound(id) {
+    if (id === currentSoundId()) return;
+    if (SAMPLE[id]) {
+      setMode(id);
+      return;
+    }
+    pickFamily(id);
+  }
+
   function setMode(next) {
     if (next === mode) return;
     mode = next;
@@ -2033,27 +2346,22 @@
   document.getElementById("panel-close").addEventListener("click", function () { setPanel(false); });
   tabSound.addEventListener("click", function () { setTab("sound"); });
   tabRhythm.addEventListener("click", function () { setTab("rhythm"); });
-  rhythmsEl.addEventListener("click", function (event) {
-    const b = event.target.closest("button");
-    if (!b || !rhythmsEl.contains(b)) return;
-    applyRhythm(ESSENCES[b.dataset.essence]);
+  soundSel.addEventListener("change", function () { pickSound(soundSel.value); });
+  rhythmSel.addEventListener("change", function () { applyRhythm(ESSENCES[rhythmSel.value]); });
+  voiceSel.addEventListener("change", function () {
+    editVoice = voiceSel.value;
+    showKnobs();
   });
-  panel.querySelector(".modes").addEventListener("click", function (event) {
-    const b = event.target.closest("[data-mode]");
-    if (!b || !panel.contains(b)) return;
-    setMode(b.dataset.mode);
-  });
-  familiesEl.addEventListener("click", function (event) {
-    const b = event.target.closest("button");
-    if (!b || !familiesEl.contains(b)) return;
-    pickFamily(b.dataset.family);
-  });
-  voicesEl.addEventListener("input", function (event) {
-    const el = event.target;
-    if (!el || el.tagName !== "INPUT") return;
-    const id = el.dataset.id;
-    if (!tweak[id]) tweak[id] = {};
-    tweak[id][el.dataset.knob] = Number(el.value);
+  [
+    ["knob-level", "level"],
+    ["knob-pitch", "pitch"],
+    ["knob-decay", "decay"],
+    ["knob-tone", "color"]
+  ].forEach(function (pair) {
+    document.getElementById(pair[0]).addEventListener("input", function (event) {
+      if (!tweak[editVoice]) tweak[editVoice] = {};
+      tweak[editVoice][pair[1]] = Number(event.target.value);
+    });
   });
   tempoInput.addEventListener("input", function () {
     tempo = Number(tempoInput.value);
@@ -2061,7 +2369,7 @@
   });
   document.addEventListener("keydown", function (event) {
     if (event.code !== "Space") return;
-    if (event.target && (event.target.tagName === "INPUT" || event.target.tagName === "BUTTON")) return;
+    if (event.target && (event.target.tagName === "INPUT" || event.target.tagName === "BUTTON" || event.target.tagName === "SELECT")) return;
     event.preventDefault();
     onPlay();
   });
