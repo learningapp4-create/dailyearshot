@@ -17,6 +17,10 @@ out/
 *.m4a
 *.aac
 !tests/fixtures/*.wav
+# one-shots rendered for the daily page (acoustic and modern kits)
+!kits/
+!kits/**
+!kits/**/*.wav
 # local secrets
 .env
 
