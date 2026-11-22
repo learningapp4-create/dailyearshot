@@ -211,17 +211,24 @@
     font-weight: 500;
   }
   #panel-close { min-height: 36px; padding: 0.3rem 0.75rem; }
-  .modes, .families, .panel-actions {
+  .subtabs, .modes, .families, .rhythms, .panel-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 0.35rem;
     margin: 0 0 0.85rem;
   }
-  .modes button, .families button, .panel-actions button {
+  .subtabs button { flex: 1; min-height: 36px; padding: 0.3rem 0.7rem; }
+  .subtabs button[aria-selected="true"] {
+    background: var(--fg);
+    color: var(--bg);
+    border-color: var(--fg);
+  }
+  .modes button, .families button, .rhythms button, .panel-actions button {
     min-height: 36px;
     padding: 0.3rem 0.7rem;
     font-size: 0.82rem;
   }
+  #pane-sound[hidden], #pane-rhythm[hidden] { display: none; }
   .voice-edit { border-top: 1px solid #2a2823; padding: 0.55rem 0 0.35rem; }
   .voice-edit h3 { margin: 0 0 0.25rem; font-size: 0.84rem; font-weight: 500; }
   .knob {
@@ -269,16 +276,25 @@
     <h2>Kit</h2>
     <button type="button" id="panel-close">Close</button>
   </div>
-  <div class="modes" role="group" aria-label="Sound">
-    <button type="button" data-mode="osc" aria-pressed="true">Oscillator</button>
-    <button type="button" data-mode="acoustic" aria-pressed="false">Acoustic</button>
-    <button type="button" data-mode="modern" aria-pressed="false">Modern electronic</button>
+  <div class="subtabs" role="tablist" aria-label="Kit">
+    <button type="button" id="tab-sound" role="tab" aria-selected="true" aria-controls="pane-sound">Sound</button>
+    <button type="button" id="tab-rhythm" role="tab" aria-selected="false" aria-controls="pane-rhythm">Rhythm</button>
   </div>
-  <div class="families" id="families" role="group" aria-label="Oscillator kit"></div>
-  <div id="voices"></div>
-  <div class="panel-actions">
-    <button type="button" id="new-kit">New kit</button>
-    <button type="button" id="today" hidden>Today’s kit</button>
+  <div id="pane-sound" role="tabpanel">
+    <div class="modes" role="group" aria-label="Sound">
+      <button type="button" data-mode="osc" aria-pressed="true">Oscillator</button>
+      <button type="button" data-mode="acoustic" aria-pressed="false">Acoustic</button>
+      <button type="button" data-mode="modern" aria-pressed="false">Modern electronic</button>
+    </div>
+    <div class="families" id="families" role="group" aria-label="Oscillator kit"></div>
+    <div id="voices"></div>
+    <div class="panel-actions">
+      <button type="button" id="new-kit">New kit</button>
+      <button type="button" id="today" hidden>Today’s kit</button>
+    </div>
+  </div>
+  <div id="pane-rhythm" role="tabpanel" hidden>
+    <div class="rhythms" id="rhythms" role="group" aria-label="Rhythm"></div>
   </div>
 </aside>
 <main>
@@ -1485,7 +1501,7 @@
   let paintedStep = -2;
 
   function salt() {
-    return day.iso + "#" + roll;
+    return day.iso + "#0";
   }
 
   function totalSteps() {
@@ -1566,6 +1582,13 @@
   const panelToggle = document.getElementById("panel-toggle");
   const familiesEl = document.getElementById("families");
   const voicesEl = document.getElementById("voices");
+  const rhythmsEl = document.getElementById("rhythms");
+  const paneSound = document.getElementById("pane-sound");
+  const paneRhythm = document.getElementById("pane-rhythm");
+  const tabSound = document.getElementById("tab-sound");
+  const tabRhythm = document.getElementById("tab-rhythm");
+  let panelTab = "sound";
+  kit.pairedEssenceId = kit.essence.id;
 
   function say(msg) {
     statusEl.textContent = msg || "";
@@ -1597,6 +1620,10 @@
     for (let i = 0; i < modeBtns.length; i++) {
       modeBtns[i].setAttribute("aria-pressed", modeBtns[i].dataset.mode === mode ? "true" : "false");
     }
+    tabSound.setAttribute("aria-selected", panelTab === "sound" ? "true" : "false");
+    tabRhythm.setAttribute("aria-selected", panelTab === "rhythm" ? "true" : "false");
+    paneSound.hidden = panelTab !== "sound";
+    paneRhythm.hidden = panelTab !== "rhythm";
     familiesEl.hidden = mode !== "osc";
     familiesEl.textContent = "";
     if (mode === "osc") {
@@ -1609,6 +1636,15 @@
         familiesEl.appendChild(b);
       });
     }
+    rhythmsEl.textContent = "";
+    Object.keys(ESSENCES).forEach(function (id) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = ESSENCES[id].name;
+      b.dataset.essence = id;
+      b.setAttribute("aria-pressed", kit.essence.id === id ? "true" : "false");
+      rhythmsEl.appendChild(b);
+    });
     const names = mode === "osc" ? null : SAMPLE[mode].names;
     voicesEl.textContent = "";
     for (let i = 0; i < kit.voices.length; i++) {
@@ -1658,7 +1694,7 @@
       tempoInput.value = String(tempo);
       tempoOut.textContent = String(tempo);
     }
-    todayBtn.hidden = mode === "osc" && roll === 0 && kit.authored;
+    todayBtn.hidden = mode === "osc" && roll === 0 && kit.authored && kit.familyId === "market";
     extendBtn.disabled = bars >= MAX_BARS;
     syncPanel();
   }
@@ -1859,19 +1895,50 @@
     paint(c ? c.bar : 0, c ? c.step : (playing ? paintedStep : -1));
   }
 
-  function apply(next) {
-    kit = next;
+  function soundKey(next) {
+    return next.familyId + "|" + next.semi + "|" + next.decayMul + "|" + next.tempo;
+  }
+
+  function keepRhythm(next) {
+    next.essence = kit.essence;
+    next.essenceId = kit.essence.id;
+    if (!next.pairedEssenceId) next.pairedEssenceId = kit.pairedEssenceId;
+    return next;
+  }
+
+  function refreshSound() {
+    renderChrome(false);
+    renderScore();
+    if (playing && ctx && room) room.gain.setTargetAtTime(roomAmount(), ctx.currentTime, 0.03);
+    paintedBar = -1;
+    if (playing) {
+      const c = currentCue();
+      paint(c ? c.bar : 0, c ? c.step : -1);
+    } else {
+      showStopped();
+    }
+  }
+
+  function applySound(next) {
+    kit = keepRhythm(next);
+    refreshSound();
+  }
+
+  function applyRhythm(essence) {
+    if (kit.essence.id === essence.id) return;
+    kit.essence = essence;
+    kit.essenceId = essence.id;
     bars = 4;
     rebuild();
-    renderChrome();
+    renderChrome(false);
     renderScore();
     if (playing && ctx) {
       const now = ctx.currentTime;
       pos = 0;
       cue.length = 0;
       nextTime = now + 0.08;
-      room.gain.setTargetAtTime(roomAmount(), now, 0.03);
       paintedBar = -1;
+      paint(0, 0);
     } else {
       showStopped();
     }
@@ -1881,7 +1948,7 @@
     let n = nextRoll;
     let next = resolve(day.iso, n);
     let guard = 0;
-    while (next.key === kit.key && guard < 8) {
+    while (soundKey(next) === soundKey(kit) && guard < 8) {
       n += 1;
       next = resolve(day.iso, n);
       guard += 1;
@@ -1889,32 +1956,33 @@
     roll = n;
     mode = "osc";
     clearTweaks();
-    apply(next);
+    next.pairedEssenceId = next.essence.id;
+    applySound(next);
   }
 
   function pickFamily(familyId) {
-    mode = "osc";
     const family = FAMILIES[familyId];
-    const essence = kit.essence;
+    const authored = familyId === "market" && roll === 0 && !!(AUTHORED[day.iso] && AUTHORED[day.iso].familyId === "market");
+    mode = "osc";
     clearTweaks();
-    if (familyId === "market" && essence.id === "late" && roll === 0 && AUTHORED[day.iso] && AUTHORED[day.iso].familyId === "market") {
-      apply(resolve(day.iso, 0));
-      return;
-    }
-    apply({
+    applySound({
       familyId: familyId,
-      essenceId: essence.id,
-      name: family.name,
+      name: authored && AUTHORED[day.iso] ? AUTHORED[day.iso].name : family.name,
       lede: family.idea,
-      tempo: family.tempo,
-      room: family.room,
+      tempo: authored && AUTHORED[day.iso] ? AUTHORED[day.iso].tempo : family.tempo,
+      room: authored && AUTHORED[day.iso] ? AUTHORED[day.iso].room : family.room,
       semi: 0,
       decayMul: 1,
-      authored: false,
+      authored: authored,
       voices: VOICES[familyId].map(function (v) { return Object.assign({}, v); }),
-      essence: essence,
-      key: familyId + "|" + essence.id + "|picked"
+      pairedEssenceId: kit.pairedEssenceId,
+      key: familyId + "|sound"
     });
+  }
+
+  function setTab(tab) {
+    panelTab = tab;
+    syncPanel();
   }
 
   function setMode(next) {
@@ -1957,10 +2025,19 @@
     roll = 0;
     mode = "osc";
     clearTweaks();
-    apply(resolve(day.iso, 0));
+    const next = resolve(day.iso, 0);
+    next.pairedEssenceId = next.essence.id;
+    applySound(next);
   });
   panelToggle.addEventListener("click", function () { setPanel(true); });
   document.getElementById("panel-close").addEventListener("click", function () { setPanel(false); });
+  tabSound.addEventListener("click", function () { setTab("sound"); });
+  tabRhythm.addEventListener("click", function () { setTab("rhythm"); });
+  rhythmsEl.addEventListener("click", function (event) {
+    const b = event.target.closest("button");
+    if (!b || !rhythmsEl.contains(b)) return;
+    applyRhythm(ESSENCES[b.dataset.essence]);
+  });
   panel.querySelector(".modes").addEventListener("click", function (event) {
     const b = event.target.closest("[data-mode]");
     if (!b || !panel.contains(b)) return;
