@@ -28,9 +28,10 @@
     -webkit-font-smoothing: antialiased;
   }
   main {
-    max-width: 44rem;
-    margin: 0 auto;
-    padding: 1.75rem 1.5rem 4.5rem;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0.85rem 0.7rem 2.75rem;
   }
   .mast {
     display: flex;
@@ -61,7 +62,7 @@
     font-size: 1.08rem;
     line-height: 1.45;
     color: #ddd6c8;
-    max-width: 38rem;
+    max-width: none;
     margin: 0 0 0.85rem;
   }
   .transport {
@@ -109,8 +110,10 @@
     gap: 0.55rem;
     color: var(--muted);
     font-size: 0.88rem;
+    flex: 1 1 12rem;
+    max-width: 24rem;
   }
-  .tempo input { width: 8.5rem; accent-color: var(--accent); }
+  .tempo input { width: auto; flex: 1; min-width: 6rem; accent-color: var(--accent); }
   .tempo b { color: var(--fg); font-weight: 500; min-width: 2.2rem; }
   .readout {
     margin: 0;
@@ -121,22 +124,29 @@
   .note {
     color: var(--muted);
     font-size: 0.85rem;
-    margin: 0.85rem 0 1.35rem;
-    max-width: 38rem;
+    margin: 0.85rem 0 1.1rem;
+    max-width: none;
   }
   .ticks {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
+    width: 100%;
     margin: 0 0 0.85rem;
   }
-  .tick {
-    width: 10px;
-    height: 4px;
-    border-radius: 1px;
+  button.tick {
+    flex: 1 1 1.35rem;
+    min-width: 1.35rem;
+    width: auto;
+    height: 1.15rem;
+    min-height: 1.15rem;
+    padding: 0;
+    border: 0;
+    border-radius: 2px;
     background: #34302a;
   }
-  .tick.now { background: var(--accent); }
+  button.tick:hover { background: #6a6256; color: inherit; }
+  button.tick.now { background: var(--accent); }
   .score { user-select: none; min-width: 0; }
   .ruler, .lane {
     display: grid;
@@ -162,10 +172,12 @@
   }
   .name.hot { color: var(--fg); }
   .cell {
-    height: 0.7rem;
+    height: 0.85rem;
     border-radius: 1px;
     background: var(--cell);
+    cursor: pointer;
   }
+  .cell:hover { box-shadow: inset 0 0 0 1px #6a6256; }
   .cell.beat { background: var(--beat); }
   .cell.on { background: var(--accent); }
   .cell.head { box-shadow: inset 0 0 0 1px #5c5348; }
@@ -176,7 +188,8 @@
     margin-top: 1.4rem;
   }
   @media (max-width: 640px) {
-    main { padding: 1.75rem 1rem 3rem; }
+    main { padding: 0.65rem 0.5rem 2rem; }
+    .tempo { max-width: none; }
     .mast { flex-direction: column; gap: 0.35rem; }
     .ruler, .lane {
       grid-template-columns: 3.35rem repeat(16, minmax(0, 1fr));
@@ -209,9 +222,9 @@
     <button type="button" id="extend">Extend</button>
   </div>
   <p class="lede" id="lede"></p>
-  <p class="note" id="note">Press Play to start the sound. Extend adds four bars. New bars keep this pattern and vary it, then the arrangement loops.</p>
-  <div class="ticks" id="ticks" aria-hidden="true"></div>
-  <div class="score" id="score" aria-hidden="true"></div>
+  <p class="note" id="note">Press Play to start. Click a bar mark or a step to jump there. Extend adds four bars; new bars vary the pattern, then it loops.</p>
+  <div class="ticks" id="ticks" role="group" aria-label="Bars"></div>
+  <div class="score" id="score"></div>
   <div class="foot">
     <button type="button" id="new-kit">New kit</button>
     <button type="button" id="today" hidden>Today’s kit</button>
@@ -1382,10 +1395,45 @@
   function renderTicks(nowBar) {
     ticks.textContent = "";
     for (let b = 0; b < bars; b++) {
-      const el = document.createElement("i");
+      const el = document.createElement("button");
+      el.type = "button";
       el.className = "tick" + (b === nowBar ? " now" : "");
+      el.dataset.bar = String(b);
+      el.setAttribute("aria-label", "Bar " + (b + 1));
       ticks.appendChild(el);
     }
+  }
+
+  function jumpTo(bar, step) {
+    if (bar < 0 || bar >= bars || step < 0 || step >= STEPS) return;
+    const target = bar * STEPS + step;
+    if (playing && ctx) {
+      const now = ctx.currentTime;
+      master.gain.cancelScheduledValues(now);
+      master.gain.setValueAtTime(Math.max(0.0001, master.gain.value), now);
+      master.gain.linearRampToValueAtTime(0.0001, now + 0.02);
+      master.gain.setValueAtTime(0.8, now + 0.05);
+      cue.length = 0;
+      pos = target;
+      nextTime = now + 0.06;
+      paintedBar = -1;
+      paint(bar, step);
+      return;
+    }
+    if (starting) return;
+    starting = true;
+    const resumed = ensure();
+    resumed.then(function () {
+      starting = false;
+      if (playing) {
+        jumpTo(bar, step);
+        return;
+      }
+      begin(target);
+    }).catch(function () {
+      starting = false;
+      note.textContent = "The browser held the sound back. Press Play again.";
+    });
   }
 
   function paint(bar, step) {
@@ -1434,22 +1482,23 @@
     raf = requestAnimationFrame(draw);
   }
 
-  function begin() {
+  function begin(at) {
     playing = true;
     playBtn.textContent = "Stop";
     playBtn.setAttribute("aria-pressed", "true");
     if (!heard) {
       heard = true;
-      note.textContent = "Extend adds four bars. New bars keep this pattern and vary it, then the arrangement loops.";
+      note.textContent = "Click a bar mark or a step to jump there. Extend adds four bars; new bars vary the pattern, then it loops.";
     }
     const now = ctx.currentTime;
     master.gain.cancelScheduledValues(now);
     master.gain.setValueAtTime(0.8, now);
     room.gain.value = kit.room;
-    pos = 0;
+    pos = typeof at === "number" ? at : 0;
     cue.length = 0;
     nextTime = now + 0.06;
     paintedBar = -1;
+    paint(Math.floor(pos / STEPS), pos % STEPS);
     schedule();
     timer = setInterval(schedule, 25);
     cancelAnimationFrame(raf);
@@ -1535,6 +1584,17 @@
 
   playBtn.addEventListener("click", onPlay);
   extendBtn.addEventListener("click", extend);
+  ticks.addEventListener("click", function (event) {
+    const mark = event.target.closest(".tick");
+    if (!mark || !ticks.contains(mark)) return;
+    jumpTo(Number(mark.dataset.bar), 0);
+  });
+  score.addEventListener("click", function (event) {
+    const cell = event.target.closest(".cell");
+    if (!cell || !score.contains(cell)) return;
+    const bar = paintedBar < 0 ? 0 : paintedBar;
+    jumpTo(bar, Number(cell.dataset.step));
+  });
   newBtn.addEventListener("click", function () { rollKit(roll + 1); });
   todayBtn.addEventListener("click", function () { roll = 0; apply(resolve(day.iso, 0)); });
   tempoInput.addEventListener("input", function () {
