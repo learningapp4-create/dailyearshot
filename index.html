@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
-<meta name="description" content="A daily drum kit and pattern, synthesized in the browser.">
+<meta name="description" content="A daily drum kit and pattern. Oscillator, acoustic, and modern electronic kits.">
 <title>Daily Earshot</title>
 <style>
   :root {
@@ -181,11 +181,69 @@
   .cell.beat { background: var(--beat); }
   .cell.on { background: var(--accent); }
   .cell.head { box-shadow: inset 0 0 0 1px #5c5348; }
-  .foot {
+  .mast-left { display: flex; align-items: center; gap: 0.75rem; }
+  #panel-toggle { min-height: 36px; padding: 0.3rem 0.85rem; }
+  body.panel-open #panel-toggle { display: none; }
+  #kit-panel {
+    position: fixed;
+    z-index: 6;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 300px;
+    overflow: auto;
+    background: #161410;
+    border-right: 1px solid var(--line);
+    padding: 0.85rem 0.9rem 2rem;
+  }
+  #kit-panel[hidden] { display: none; }
+  .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    margin: 0 0 0.9rem;
+  }
+  #kit-panel h2 {
+    margin: 0;
+    font-family: var(--serif);
+    font-size: 1.45rem;
+    font-weight: 500;
+  }
+  #panel-close { min-height: 36px; padding: 0.3rem 0.75rem; }
+  .modes, .families, .panel-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.6rem;
-    margin-top: 1.4rem;
+    gap: 0.35rem;
+    margin: 0 0 0.85rem;
+  }
+  .modes button, .families button, .panel-actions button {
+    min-height: 36px;
+    padding: 0.3rem 0.7rem;
+    font-size: 0.82rem;
+  }
+  .voice-edit { border-top: 1px solid #2a2823; padding: 0.55rem 0 0.35rem; }
+  .voice-edit h3 { margin: 0 0 0.25rem; font-size: 0.84rem; font-weight: 500; }
+  .knob {
+    display: grid;
+    grid-template-columns: 3.1rem 1fr;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--muted);
+    font-size: 0.72rem;
+    margin: 0.12rem 0;
+  }
+  .knob input { width: 100%; accent-color: var(--accent); }
+  .status { color: var(--muted); font-size: 0.85rem; margin: 0 0 0.85rem; }
+  .status:empty { display: none; }
+  @media (min-width: 860px) {
+    body.panel-open main {
+      margin-left: 300px;
+      width: calc(100% - 300px);
+    }
+  }
+  @media (max-width: 859px) {
+    #kit-panel { width: min(22rem, 92vw); box-shadow: 12px 0 32px rgba(0, 0, 0, 0.45); }
   }
   @media (max-width: 640px) {
     main { padding: 0.65rem 0.5rem 2rem; }
@@ -206,9 +264,29 @@
 </style>
 </head>
 <body>
+<aside id="kit-panel" aria-label="Kit" hidden>
+  <div class="panel-head">
+    <h2>Kit</h2>
+    <button type="button" id="panel-close">Close</button>
+  </div>
+  <div class="modes" role="group" aria-label="Sound">
+    <button type="button" data-mode="osc" aria-pressed="true">Oscillator</button>
+    <button type="button" data-mode="acoustic" aria-pressed="false">Acoustic</button>
+    <button type="button" data-mode="modern" aria-pressed="false">Modern electronic</button>
+  </div>
+  <div class="families" id="families" role="group" aria-label="Oscillator kit"></div>
+  <div id="voices"></div>
+  <div class="panel-actions">
+    <button type="button" id="new-kit">New kit</button>
+    <button type="button" id="today" hidden>Today’s kit</button>
+  </div>
+</aside>
 <main>
   <header class="mast">
-    <p class="kicker">Daily Earshot</p>
+    <div class="mast-left">
+      <button type="button" id="panel-toggle" aria-expanded="false" aria-controls="kit-panel">Kit</button>
+      <p class="kicker">Daily Earshot</p>
+    </div>
     <p class="date" id="date"></p>
   </header>
   <h1 id="kit-name">Night Market</h1>
@@ -222,14 +300,10 @@
     <button type="button" id="extend">Extend</button>
   </div>
   <p class="lede" id="lede"></p>
-  <p class="note" id="note">Press Play to start. Click a bar mark or a step to jump there. Extend adds four bars; new bars vary the pattern, then it loops.</p>
+  <p class="status" id="status" role="status"></p>
   <div class="ticks" id="ticks" role="group" aria-label="Bars"></div>
   <div class="score" id="score"></div>
-  <div class="foot">
-    <button type="button" id="new-kit">New kit</button>
-    <button type="button" id="today" hidden>Today’s kit</button>
-  </div>
-  <noscript><p class="note">This page needs JavaScript to synthesize the drums.</p></noscript>
+  <noscript><p class="note">This page needs JavaScript to play the drums.</p></noscript>
 </main>
 <script>
 (function () {
@@ -913,8 +987,29 @@
   }
 
   function decayOf(voice, key) {
-    const mul = kit ? kit.decayMul : 1;
+    const mul = (kit ? kit.decayMul : 1) * (voice.decayUser == null ? 1 : voice.decayUser);
     return (voice[key] || 0.1) * mul;
+  }
+
+  function voiceOut(node, voice, nodes) {
+    const color = voice.color || 0;
+    if (Math.abs(color) < 0.02) {
+      node.connect(master);
+      return;
+    }
+    const f = ctx.createBiquadFilter();
+    if (color < 0) {
+      f.type = "lowpass";
+      f.frequency.value = 9000 * Math.pow(2, color * 2.2);
+      f.Q.value = 0.7;
+    } else {
+      f.type = "highshelf";
+      f.frequency.value = 2800;
+      f.gain.value = color * 8;
+    }
+    node.connect(f);
+    f.connect(master);
+    nodes.push(f);
   }
 
   function triggerKick(v, time, vel, semi) {
@@ -972,7 +1067,7 @@
       nodes.push(blip, cg);
     }
 
-    bus.connect(master);
+    voiceOut(bus, v, nodes);
     nodes.push(bus);
     cleanup(nodes, stop + 0.02);
   }
@@ -1011,7 +1106,7 @@
     if (nStop > stop) stop = nStop;
     const shape = shaper(1.8 + vel);
     bus.connect(shape);
-    shape.connect(master);
+    voiceOut(shape, v, nodes);
     nodes.push(bus, shape);
     cleanup(nodes, stop + 0.02);
   }
@@ -1031,7 +1126,7 @@
       if (end > stop) stop = end;
       t += v.gap * (1 + i * 0.32);
     }
-    bus.connect(master);
+    voiceOut(bus, v, nodes);
     nodes.push(bus);
     cleanup(nodes, stop + 0.02);
   }
@@ -1062,7 +1157,7 @@
     lp.connect(hp);
     hp.connect(bp);
     bp.connect(amp);
-    amp.connect(master);
+    voiceOut(amp, v, nodes);
     nodes.push(mix, lp, hp, bp, amp);
     burstNoise(amp, time, 7000, 10000, 0.6, tau * 0.5, v.gain * vel * 0.25, 1.2, nodes);
     cleanup(nodes, stop + 0.02);
@@ -1093,7 +1188,7 @@
     }
     const nEnd = burstNoise(bus, time, f * 1.4, f * 2.6, 1.4, 0.012, peak * (v.noise || 0.4), 1.45, nodes);
     if (nEnd > stop) stop = nEnd;
-    bus.connect(master);
+    voiceOut(bus, v, nodes);
     nodes.push(bus);
     cleanup(nodes, stop + 0.02);
   }
@@ -1126,7 +1221,7 @@
     mix.connect(lp);
     lp.connect(bp);
     bp.connect(amp);
-    amp.connect(master);
+    voiceOut(amp, v, nodes);
     nodes.push(mix, lp, bp, amp);
     burstNoise(amp, time, 1800, v.center, 0.8, 0.004, peak * 0.35, 0.2, nodes);
     cleanup(nodes, stop + 0.02);
@@ -1153,7 +1248,7 @@
       nodes.push(o, g);
       if (end > stop) stop = end;
     }
-    bus.connect(master);
+    voiceOut(bus, v, nodes);
     nodes.push(bus);
     cleanup(nodes, stop + 0.02);
   }
@@ -1180,7 +1275,7 @@
     if (tail > stop) stop = tail;
     const flesh = burstNoise(bus, time, 180, 460, 0.7, 0.007, peak * (v.flesh || 0.3) * 2.4, 0.15, nodes);
     if (flesh > stop) stop = flesh;
-    bus.connect(master);
+    voiceOut(bus, v, nodes);
     nodes.push(bus);
     cleanup(nodes, stop + 0.02);
   }
@@ -1196,11 +1291,142 @@
     clap: triggerClap
   };
 
+  // Acoustic and modern are rendered one-shots, not more oscillator presets.
+  const SAMPLE = {
+    acoustic: {
+      title: "Acoustic",
+      files: {
+        kick: "kits/acoustic/kick.wav",
+        snare: "kits/acoustic/snare.wav",
+        hat: "kits/acoustic/hat.wav",
+        ghost: "kits/acoustic/rim.wav",
+        bell: "kits/acoustic/clave.wav",
+        ring: "kits/acoustic/ride.wav",
+        tom: "kits/acoustic/tom.wav",
+        clap: "kits/acoustic/clap.wav"
+      },
+      names: {
+        kick: "kick", snare: "snare", hat: "hat", ghost: "rim",
+        bell: "clave", ring: "ride", tom: "tom", clap: "clap"
+      }
+    },
+    modern: {
+      title: "Modern electronic",
+      files: {
+        kick: "kits/modern/kick.wav",
+        snare: "kits/modern/clap.wav",
+        hat: "kits/modern/hat.wav",
+        ghost: "kits/modern/snare.wav",
+        bell: "kits/modern/perc.wav",
+        ring: "kits/modern/openhat.wav",
+        tom: "kits/modern/tom.wav",
+        clap: "kits/modern/clap.wav"
+      },
+      names: {
+        kick: "kick", snare: "clap", hat: "hat", ghost: "snare",
+        bell: "perc", ring: "open hat", tom: "tom", clap: "clap"
+      }
+    }
+  };
+  const SAMPLE_GAIN = {
+    kick: 0.92, snare: 0.72, hat: 0.38, ghost: 0.48,
+    bell: 0.42, ring: 0.36, tom: 0.68, clap: 0.7
+  };
+  const tweak = {};
+  const buffers = { acoustic: null, modern: null };
+  const loadError = { acoustic: "", modern: "" };
+  let mode = "osc";
+
+  function voiceLive(voice) {
+    const t = tweak[voice.id];
+    if (!t) return voice;
+    const level = t.level == null ? 1 : t.level;
+    const pitch = t.pitch || 0;
+    const decayUser = t.decay == null ? 1 : t.decay;
+    const color = t.color || 0;
+    if (level === 1 && pitch === 0 && decayUser === 1 && color === 0) return voice;
+    return Object.assign({}, voice, {
+      gain: voice.gain * level,
+      semi: (voice.semi || 0) + pitch,
+      decayUser: decayUser,
+      color: color
+    });
+  }
+
+  function loadKit(which) {
+    if (buffers[which]) return Promise.resolve(buffers[which]);
+    if (loadError[which]) return Promise.reject(new Error(loadError[which]));
+    const spec = SAMPLE[which];
+    const urls = [];
+    Object.keys(spec.files).forEach(function (id) {
+      if (urls.indexOf(spec.files[id]) < 0) urls.push(spec.files[id]);
+    });
+    return Promise.all(urls.map(function (url) {
+      return fetch(url).then(function (res) {
+        if (!res.ok) throw new Error(url + " (" + res.status + ")");
+        return res.arrayBuffer();
+      }).then(function (raw) {
+        return ctx.decodeAudioData(raw.slice(0));
+      }).then(function (buf) {
+        return { url: url, buf: buf };
+      });
+    })).then(function (pairs) {
+      const byUrl = {};
+      pairs.forEach(function (pair) { byUrl[pair.url] = pair.buf; });
+      const byId = {};
+      Object.keys(spec.files).forEach(function (id) { byId[id] = byUrl[spec.files[id]]; });
+      buffers[which] = byId;
+      return byId;
+    }).catch(function (err) {
+      loadError[which] = err && err.message ? err.message : String(err);
+      throw err;
+    });
+  }
+
+  function triggerSample(id, time, vel, semi) {
+    const pack = buffers[mode];
+    if (!pack || !pack[id]) return;
+    const t = tweak[id] || {};
+    const level = t.level == null ? 1 : t.level;
+    const pitch = t.pitch || 0;
+    const decayUser = t.decay == null ? 1 : t.decay;
+    const color = t.color || 0;
+    const rate = Math.pow(2, ((kit ? kit.semi : 0) + pitch + (semi || 0)) / 12);
+    const src = ctx.createBufferSource();
+    src.buffer = pack[id];
+    src.playbackRate.setValueAtTime(rate, time);
+    const g = ctx.createGain();
+    const peak = (SAMPLE_GAIN[id] || 0.5) * level * vel;
+    const dur = pack[id].duration / rate;
+    if (decayUser < 0.98) {
+      env(g.gain, time, peak, 0.001, 0, Math.max(0.02, dur * decayUser));
+    } else {
+      g.gain.setValueAtTime(peak, time);
+    }
+    src.connect(g);
+    const nodes = [src, g];
+    voiceOut(g, { color: color }, nodes);
+    src.start(time);
+    src.stop(time + dur + 0.03);
+    cleanup(nodes, time + dur + 0.05);
+  }
+
   function trigger(voice, time, vel, semi) {
     if (!ctx || time < ctx.currentTime - 0.03) return;
-    const fn = TRIGGERS[voice.kind];
+    vel = Math.max(0.02, Math.min(1, vel));
+    if (mode !== "osc") {
+      triggerSample(voice.id, time, vel, semi || 0);
+      return;
+    }
+    const live = voiceLive(voice);
+    const fn = TRIGGERS[live.kind];
     if (!fn) return;
-    fn(voice, time, Math.max(0.02, Math.min(1, vel)), semi || 0);
+    fn(live, time, vel, semi || 0);
+  }
+
+  function roomAmount() {
+    if (mode !== "osc") return Math.min(kit.room, 0.08);
+    return kit.room;
   }
 
   function buildGraph() {
@@ -1208,7 +1434,7 @@
     master = ctx.createGain();
     master.gain.value = 0.8;
     room = ctx.createGain();
-    room.gain.value = kit.room;
+    room.gain.value = roomAmount();
     const hip = biquad("highpass", 28, 0.7);
     const clip = shaper(1.35);
     master.connect(hip);
@@ -1257,7 +1483,6 @@
   const cue = [];
   let paintedBar = -1;
   let paintedStep = -2;
-  let heard = false;
 
   function salt() {
     return day.iso + "#" + roll;
@@ -1329,7 +1554,7 @@
   const tempoOut = document.getElementById("tempo-out");
   const readout = document.getElementById("readout");
   const extendBtn = document.getElementById("extend");
-  const note = document.getElementById("note");
+  const statusEl = document.getElementById("status");
   const ticks = document.getElementById("ticks");
   const score = document.getElementById("score");
   const newBtn = document.getElementById("new-kit");
@@ -1337,6 +1562,81 @@
   const kitName = document.getElementById("kit-name");
   const lede = document.getElementById("lede");
   const dateEl = document.getElementById("date");
+  const panel = document.getElementById("kit-panel");
+  const panelToggle = document.getElementById("panel-toggle");
+  const familiesEl = document.getElementById("families");
+  const voicesEl = document.getElementById("voices");
+
+  function say(msg) {
+    statusEl.textContent = msg || "";
+  }
+
+  function clearTweaks() {
+    Object.keys(tweak).forEach(function (k) { delete tweak[k]; });
+  }
+
+  function knob(id, key, label, value, min, max, step) {
+    const lab = document.createElement("label");
+    lab.className = "knob";
+    lab.appendChild(document.createTextNode(label));
+    const input = document.createElement("input");
+    input.type = "range";
+    input.min = String(min);
+    input.max = String(max);
+    input.step = String(step);
+    input.value = String(value);
+    input.dataset.id = id;
+    input.dataset.knob = key;
+    input.setAttribute("aria-label", label);
+    lab.appendChild(input);
+    return lab;
+  }
+
+  function syncPanel() {
+    const modeBtns = panel.querySelectorAll("[data-mode]");
+    for (let i = 0; i < modeBtns.length; i++) {
+      modeBtns[i].setAttribute("aria-pressed", modeBtns[i].dataset.mode === mode ? "true" : "false");
+    }
+    familiesEl.hidden = mode !== "osc";
+    familiesEl.textContent = "";
+    if (mode === "osc") {
+      Object.keys(FAMILIES).forEach(function (id) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.textContent = FAMILIES[id].name;
+        b.dataset.family = id;
+        b.setAttribute("aria-pressed", kit.familyId === id ? "true" : "false");
+        familiesEl.appendChild(b);
+      });
+    }
+    const names = mode === "osc" ? null : SAMPLE[mode].names;
+    voicesEl.textContent = "";
+    for (let i = 0; i < kit.voices.length; i++) {
+      const voice = kit.voices[i];
+      const t = tweak[voice.id] || {};
+      const box = document.createElement("div");
+      box.className = "voice-edit";
+      const h = document.createElement("h3");
+      h.textContent = names ? names[voice.id] : voice.name;
+      box.appendChild(h);
+      box.appendChild(knob(voice.id, "level", "Level", t.level == null ? 1 : t.level, 0.2, 1.6, 0.01));
+      box.appendChild(knob(voice.id, "pitch", "Pitch", t.pitch || 0, -12, 12, 1));
+      box.appendChild(knob(voice.id, "decay", "Decay", t.decay == null ? 1 : t.decay, 0.5, 1.8, 0.01));
+      box.appendChild(knob(voice.id, "color", "Tone", t.color || 0, -1, 1, 0.01));
+      voicesEl.appendChild(box);
+    }
+  }
+
+  function setPanel(open) {
+    document.body.classList.toggle("panel-open", open);
+    panel.hidden = !open;
+    panelToggle.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+
+  function laneName(voice) {
+    if (mode === "osc") return voice.name;
+    return SAMPLE[mode].names[voice.id] || voice.name;
+  }
 
   function cellGrid(hits) {
     const g = {};
@@ -1347,16 +1647,20 @@
     return g;
   }
 
-  function renderChrome() {
-    kitName.textContent = kit.name;
-    lede.textContent = kit.lede;
+  function renderChrome(resetTempo) {
+    const sample = mode === "osc" ? null : SAMPLE[mode];
+    kitName.textContent = sample ? sample.title : kit.name;
+    lede.textContent = kit.essence.name;
     dateEl.textContent = day.label;
-    document.title = "Daily Earshot — " + kit.name;
-    tempo = Math.max(64, Math.min(168, kit.tempo));
-    tempoInput.value = String(tempo);
-    tempoOut.textContent = String(tempo);
-    todayBtn.hidden = roll === 0;
+    document.title = "Daily Earshot — " + kitName.textContent;
+    if (resetTempo) {
+      tempo = Math.max(64, Math.min(168, kit.tempo));
+      tempoInput.value = String(tempo);
+      tempoOut.textContent = String(tempo);
+    }
+    todayBtn.hidden = mode === "osc" && roll === 0 && kit.authored;
     extendBtn.disabled = bars >= MAX_BARS;
+    syncPanel();
   }
 
   function renderScore() {
@@ -1378,7 +1682,7 @@
       lane.dataset.voice = voice.id;
       const name = document.createElement("div");
       name.className = "name";
-      name.textContent = voice.name;
+      name.textContent = laneName(voice);
       lane.appendChild(name);
       for (let s = 0; s < STEPS; s++) {
         const cell = document.createElement("div");
@@ -1422,8 +1726,7 @@
     }
     if (starting) return;
     starting = true;
-    const resumed = ensure();
-    resumed.then(function () {
+    readyAudio().then(function () {
       starting = false;
       if (playing) {
         jumpTo(bar, step);
@@ -1432,7 +1735,7 @@
       begin(target);
     }).catch(function () {
       starting = false;
-      note.textContent = "The browser held the sound back. Press Play again.";
+      say("The browser held the sound back. Press Play again.");
     });
   }
 
@@ -1486,14 +1789,10 @@
     playing = true;
     playBtn.textContent = "Stop";
     playBtn.setAttribute("aria-pressed", "true");
-    if (!heard) {
-      heard = true;
-      note.textContent = "Click a bar mark or a step to jump there. Extend adds four bars; new bars vary the pattern, then it loops.";
-    }
     const now = ctx.currentTime;
     master.gain.cancelScheduledValues(now);
     master.gain.setValueAtTime(0.8, now);
-    room.gain.value = kit.room;
+    room.gain.value = roomAmount();
     pos = typeof at === "number" ? at : 0;
     cue.length = 0;
     nextTime = now + 0.06;
@@ -1522,6 +1821,16 @@
     showStopped();
   }
 
+  function readyAudio() {
+    const resumed = ensure();
+    if (mode === "osc") return resumed.then(function () { say(""); });
+    return resumed.then(function () {
+      return loadKit(mode).then(function () { say(""); }, function (err) {
+        say(err.message || String(err));
+      });
+    });
+  }
+
   function onPlay() {
     if (playing) {
       stop();
@@ -1529,14 +1838,13 @@
     }
     if (starting) return;
     starting = true;
-    const resumed = ensure();
-    resumed.then(function () {
+    readyAudio().then(function () {
       starting = false;
       if (playing) return;
       begin();
     }).catch(function () {
       starting = false;
-      note.textContent = "The browser held the sound back. Press Play again.";
+      say("The browser held the sound back. Press Play again.");
     });
   }
 
@@ -1562,7 +1870,7 @@
       pos = 0;
       cue.length = 0;
       nextTime = now + 0.08;
-      room.gain.setTargetAtTime(kit.room, now, 0.03);
+      room.gain.setTargetAtTime(roomAmount(), now, 0.03);
       paintedBar = -1;
     } else {
       showStopped();
@@ -1579,7 +1887,56 @@
       guard += 1;
     }
     roll = n;
+    mode = "osc";
+    clearTweaks();
     apply(next);
+  }
+
+  function pickFamily(familyId) {
+    mode = "osc";
+    const family = FAMILIES[familyId];
+    const essence = kit.essence;
+    clearTweaks();
+    if (familyId === "market" && essence.id === "late" && roll === 0 && AUTHORED[day.iso] && AUTHORED[day.iso].familyId === "market") {
+      apply(resolve(day.iso, 0));
+      return;
+    }
+    apply({
+      familyId: familyId,
+      essenceId: essence.id,
+      name: family.name,
+      lede: family.idea,
+      tempo: family.tempo,
+      room: family.room,
+      semi: 0,
+      decayMul: 1,
+      authored: false,
+      voices: VOICES[familyId].map(function (v) { return Object.assign({}, v); }),
+      essence: essence,
+      key: familyId + "|" + essence.id + "|picked"
+    });
+  }
+
+  function setMode(next) {
+    if (next === mode) return;
+    mode = next;
+    if (ctx && room) room.gain.value = roomAmount();
+    renderChrome(false);
+    renderScore();
+    if (playing) {
+      const c = currentCue();
+      paint(c ? c.bar : 0, c ? c.step : -1);
+    } else {
+      showStopped();
+    }
+    if (mode === "osc") {
+      say("");
+      return;
+    }
+    const resumed = ensure();
+    resumed.then(function () { return loadKit(mode); }).then(function () { say(""); }).catch(function (err) {
+      say(err.message || String(err));
+    });
   }
 
   playBtn.addEventListener("click", onPlay);
@@ -1596,7 +1953,31 @@
     jumpTo(bar, Number(cell.dataset.step));
   });
   newBtn.addEventListener("click", function () { rollKit(roll + 1); });
-  todayBtn.addEventListener("click", function () { roll = 0; apply(resolve(day.iso, 0)); });
+  todayBtn.addEventListener("click", function () {
+    roll = 0;
+    mode = "osc";
+    clearTweaks();
+    apply(resolve(day.iso, 0));
+  });
+  panelToggle.addEventListener("click", function () { setPanel(true); });
+  document.getElementById("panel-close").addEventListener("click", function () { setPanel(false); });
+  panel.querySelector(".modes").addEventListener("click", function (event) {
+    const b = event.target.closest("[data-mode]");
+    if (!b || !panel.contains(b)) return;
+    setMode(b.dataset.mode);
+  });
+  familiesEl.addEventListener("click", function (event) {
+    const b = event.target.closest("button");
+    if (!b || !familiesEl.contains(b)) return;
+    pickFamily(b.dataset.family);
+  });
+  voicesEl.addEventListener("input", function (event) {
+    const el = event.target;
+    if (!el || el.tagName !== "INPUT") return;
+    const id = el.dataset.id;
+    if (!tweak[id]) tweak[id] = {};
+    tweak[id][el.dataset.knob] = Number(el.value);
+  });
   tempoInput.addEventListener("input", function () {
     tempo = Number(tempoInput.value);
     tempoOut.textContent = String(tempo);
@@ -1609,7 +1990,7 @@
   });
 
   rebuild();
-  renderChrome();
+  renderChrome(true);
   renderScore();
   showStopped();
 })();
